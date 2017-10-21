@@ -1,0 +1,17 @@
+[{
+
+    "modid": "frontend-auth",
+
+    "name": "frontend-auth",
+
+    "version":  "1.0",
+
+    "description": "Auth system frontend under KeletonFramework",
+
+    "authorList": [
+
+		"Kumonda221"
+
+    ]
+
+}]
