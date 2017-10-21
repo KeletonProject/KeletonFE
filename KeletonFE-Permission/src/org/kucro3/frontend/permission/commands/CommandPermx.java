@@ -233,31 +233,25 @@ public class CommandPermx implements CommandExecutor
                 break;
 
             case "viewall":
-                transaction = null; // TODO
+                final PaginationList list;
                 switch(option)
                 {
                     case "perms":
-
+                        list = Misc.fromPermissions(subject);
                         break;
 
-                    case "parents": {
-                        ArrayList<Text> inheritanceList = new ArrayList<>();
-
-                        StringBuilder inhertianceSymbol = new StringBuilder();
-                        Text onHover = null;
-                        Map<Set<Context>, List<Subject>> parents = data.getAllParents();
-
-                        do {
-
-                        } while (!parents.isEmpty());
-
+                    case "parents":
+                        list = Misc.fromParents(subject);
                         break;
-                    }
 
                     default:
                         src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_OPTION, option)));
                         return CommandResult.empty();
                 }
+                transaction = (unused) -> {
+                    list.sendTo(src);
+                    return null;
+                };
                 break;
 
             default:
