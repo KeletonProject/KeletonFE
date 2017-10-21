@@ -240,9 +240,19 @@ public class CommandPermx implements CommandExecutor
 
                         break;
 
-                    case "parents":
+                    case "parents": {
+                        ArrayList<Text> inheritanceList = new ArrayList<>();
+
+                        StringBuilder inhertianceSymbol = new StringBuilder();
+                        Text onHover = null;
+                        Map<Set<Context>, List<Subject>> parents = data.getAllParents();
+
+                        do {
+
+                        } while (!parents.isEmpty());
 
                         break;
+                    }
 
                     default:
                         src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_OPTION, option)));
