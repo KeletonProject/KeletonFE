@@ -226,6 +226,9 @@ public class InheritanceTree {
         {
             this.parent = parent;
             this.computeWeaken = computeWeaken;
+
+            if(parent == null)
+                this.hashSet = new Reference<>();
         }
 
         public Builder getParent()

@@ -152,6 +152,14 @@ public final class Misc {
                 .build();
     }
 
+    private static void asRoot(InheritanceTree.Builder builder)
+    {
+        builder
+                .content(Text.of())
+                .rawContexts(Collections.emptySet())
+                .rawContent("");
+    }
+
     public static Text fromPermission(Text symbolTrue, Text symbolFalse, String permission, boolean value)
     {
         Text.Builder builder = Text.builder();
@@ -185,6 +193,9 @@ public final class Misc {
         Map<Set<Context>, Text> permissionContextSymbols = new HashMap<>();
         Increment increment = new Increment();
         InheritanceTree.Builder root = InheritanceTree.builder(true);
+
+        asRoot(root);
+
         Repeat repeat = Repeat.empty('>');
 
         InheritanceTree.Builder last = fromPermissions(
@@ -364,6 +375,9 @@ public final class Misc {
         List<Text> list = new ArrayList<>();
 
         InheritanceTree.Builder builder = InheritanceTree.builder(true);
+
+        asRoot(builder);
+
         fromParents(
                 subject.getSubjectData().getAllParents(),
                 new HashMap<>(),
