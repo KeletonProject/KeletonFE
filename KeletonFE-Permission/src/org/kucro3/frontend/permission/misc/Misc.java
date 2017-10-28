@@ -1,7 +1,11 @@
 package org.kucro3.frontend.permission.misc;
 
+import org.kucro3.frontend.permission.I18n;
 import org.kucro3.frontend.permission.SpongeMain;
+import org.kucro3.keleton.i18n.LocaleProperties;
+import org.kucro3.keleton.text.TextUtil;
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.item.ItemTypes;
 import org.spongepowered.api.item.inventory.ItemStack;
@@ -10,14 +14,18 @@ import org.spongepowered.api.profile.ProfileNotFoundException;
 import org.spongepowered.api.service.context.Context;
 import org.spongepowered.api.service.pagination.PaginationList;
 import org.spongepowered.api.service.permission.Subject;
+import org.spongepowered.api.service.permission.SubjectData;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
+import org.spongepowered.api.text.channel.MessageReceiver;
 import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.util.Tristate;
 
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 public final class Misc {
     public static Text[] showContextsOnHover(Set<Context> contexts, Text... text)
@@ -186,7 +194,30 @@ public final class Misc {
         return builder.build();
     }
 
-    public static PaginationList fromPermissions(Subject subject)
+    public static PaginationList fromPermissionsWithCurrentContextsSwitched(Subject subject,
+                                                                           boolean plain,
+                                                                           boolean flag)
+    {
+        return flag ?
+                fromPermissionsWithCurrentContexts(subject, plain) :
+                fromPermissions(subject, plain);
+    }
+
+    public static PaginationList fromPermissionsWithCurrentContexts(Subject subject,
+                                                                    boolean plain)
+    {
+        return fromPermissions(subject, plain, PermissionFilter.withContexts(subject.getActiveContexts()));
+    }
+
+    public static PaginationList fromPermissions(Subject subject,
+                                                 PermissionFilter... filters)
+    {
+        return fromPermissions(subject, false, filters);
+    }
+
+    public static PaginationList fromPermissions(Subject subject,
+                                                 boolean plain,
+                                                 PermissionFilter... filters)
     {
         Map<Set<Context>, Map<String, Boolean>> overrides = new HashMap<>();
         Map<Set<Context>, Text> subjectContextSymbols = new HashMap<>();
@@ -203,12 +234,13 @@ public final class Misc {
                 permissionContextSymbols,
                 increment,
                 root,
-                subject
+                subject,
+                filters
         );
 
         Map<Set<Context>, List<Subject>> parentMap = subject.getSubjectData().getAllParents();
 
-        if(!parentMap.isEmpty())
+        if(!(plain || parentMap.isEmpty()))
             fromPermissions(
                     overrides,
                     parentMap,
@@ -216,7 +248,8 @@ public final class Misc {
                     permissionContextSymbols,
                     increment,
                     last,
-                    repeat
+                    repeat,
+                    filters
             );
 
         List<Text> list = new ArrayList<>();
@@ -244,7 +277,8 @@ public final class Misc {
                                                            Map<Set<Context>, Text> contextSymbols,
                                                            Increment increment,
                                                            InheritanceTree.Builder builder,
-                                                           Subject subject)
+                                                           Subject subject,
+                                                           PermissionFilter[] filters)
     {
         Map<Set<Context>, Map<String, Boolean>> map = subject.getSubjectData().getAllPermissions();
 
@@ -267,17 +301,24 @@ public final class Misc {
 
             for(Map.Entry<String, Boolean> permEntry : entry.getValue().entrySet())
             {
-                last = builder
-                        .child()
-                        .contextSymbol(contextSymbol)
-                        .rawContent(permEntry.getKey())
-                        .rawContexts(entry.getKey())
-                        .content(
-                                fromPermission(
-                                        permEntry.getKey(),
-                                        permEntry.getValue()
-                                )
-                        );
+                if(matches(
+                        subject,
+                        entry.getKey(),
+                        permEntry.getKey(),
+                        Tristate.fromBoolean(permEntry.getValue()),
+                        filters
+                ))
+                    last = builder
+                            .child()
+                            .contextSymbol(contextSymbol)
+                            .rawContent(permEntry.getKey())
+                            .rawContexts(entry.getKey())
+                            .content(
+                                    fromPermission(
+                                            permEntry.getKey(),
+                                            permEntry.getValue()
+                                    )
+                            );
 
                 recordOverride(
                         overrides,
@@ -297,7 +338,8 @@ public final class Misc {
                                         Map<Set<Context>, Text> permissionContextSymbols,
                                         Increment increment,
                                         InheritanceTree.Builder builder,
-                                        Repeat repeat)
+                                        Repeat repeat,
+                                        PermissionFilter[] filters)
     {
         for(Map.Entry<Set<Context>, List<Subject>> parentEntry : parentMap.entrySet())
         {
@@ -335,13 +377,20 @@ public final class Misc {
                     {
                         Text content = fromPermission(permEntry.getKey(), permEntry.getValue());
 
-                        last = builder
-                                .child()
-                                .rawContent(permEntry.getKey())
-                                .rawContexts(permsEntry.getKey())
-                                .content(content)
-                                .contextSymbol(contextSymbol)
-                                .inheritanceSymbol(inheritanceSymbol);
+                        if(matches(
+                                subject,
+                                permsEntry.getKey(),
+                                permEntry.getKey(),
+                                Tristate.fromBoolean(permEntry.getValue()),
+                                filters
+                        ))
+                            last = builder
+                                    .child()
+                                    .rawContent(permEntry.getKey())
+                                    .rawContexts(permsEntry.getKey())
+                                    .content(content)
+                                    .contextSymbol(contextSymbol)
+                                    .inheritanceSymbol(inheritanceSymbol);
 
                         recordOverride(
                                 overrides,
@@ -364,13 +413,37 @@ public final class Misc {
                         permissionContextSymbols,
                         increment,
                         last,
-                        repeat
+                        repeat,
+                        filters
                 );
             }
         }
     }
 
-    public static PaginationList fromParents(Subject subject)
+    public static PaginationList fromParentsWithCurrentContextsSwitched(Subject subject,
+                                                                        boolean plain,
+                                                                        boolean flag)
+    {
+        return flag ?
+                fromParentsWithCurrentContexts(subject, plain) :
+                fromParents(subject, plain);
+    }
+
+    public static PaginationList fromParentsWithCurrentContexts(Subject subject,
+                                                                boolean plain)
+    {
+        return fromParents(subject, plain, ParentFilter.withContexts(subject.getActiveContexts()));
+    }
+
+    public static PaginationList fromParents(Subject subject,
+                                             ParentFilter... filters)
+    {
+        return fromParents(subject, false);
+    }
+
+    public static PaginationList fromParents(Subject subject,
+                                             boolean plain,
+                                             ParentFilter... filters)
     {
         List<Text> list = new ArrayList<>();
 
@@ -379,12 +452,15 @@ public final class Misc {
         asRoot(builder);
 
         fromParents(
+                subject,
                 subject.getSubjectData().getAllParents(),
                 new HashMap<>(),
                 new Increment(),
                 null,
                 builder,
-                Repeat.empty('>')
+                Repeat.empty('>'),
+                plain,
+                filters
                 );
 
         builder
@@ -402,12 +478,15 @@ public final class Misc {
                 .build();
     }
 
-    private static void fromParents(Map<Set<Context>, List<Subject>> parentMap,
+    private static void fromParents(Subject subject,
+                                    Map<Set<Context>, List<Subject>> parentMap,
                                     Map<Set<Context>, Text> contextSymbols,
                                     Increment increment,
                                     Subject inheritance,
                                     InheritanceTree.Builder builder,
-                                    Repeat repeat)
+                                    Repeat repeat,
+                                    boolean plain,
+                                    ParentFilter[] filters)
     {
         for(Map.Entry<Set<Context>, List<Subject>> entry : parentMap.entrySet()) {
             Text contextSymbol = fromContexts(
@@ -422,6 +501,13 @@ public final class Misc {
             repeat = repeat.increase();
 
             for(Subject parent : entry.getValue()) {
+                if(!matches(
+                        subject,
+                        entry.getKey(),
+                        parent,
+                        filters))
+                    continue;
+
                 InheritanceTree.Builder child = builder
                         .child()
                         .contextSymbol(contextSymbol)
@@ -434,15 +520,21 @@ public final class Misc {
                                         .build()
                         );
 
+                if(plain)
+                    continue;
+
                 Map<Set<Context>, List<Subject>> nextParentMap;
                 if (!(nextParentMap = parent.getSubjectData().getAllParents()).isEmpty())
                     fromParents(
+                            subject,
                             nextParentMap,
                             contextSymbols,
                             increment,
                             parent,
                             child,
-                            repeat
+                            repeat,
+                            false,
+                            filters
                     );
             }
         }
@@ -526,6 +618,240 @@ public final class Misc {
             SpongeMain.getInstance().gerLogger().error("Misc#fromUser", e);
         }
         return Optional.empty();
+    }
+
+    public static Function<Void, Boolean> functionQueryHasPermission(MessageReceiver receiver,
+                                                                     LocaleProperties locale,
+                                                                     Subject subject,
+                                                                     String permission,
+                                                                     CommandResult.Builder result)
+    {
+        return (unused) -> {
+            if(subject.hasPermission(permission))
+               receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_TRUE)));
+            else
+                receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_FALSE)));
+            result.queryResult(1);
+            return null;
+        };
+    }
+
+    public static Function<Void, Boolean> functionQueryContainsPermission(MessageReceiver receiver,
+                                                                          LocaleProperties locale,
+                                                                          Subject subject,
+                                                                          String permission,
+                                                                          CommandResult.Builder result)
+    {
+        SubjectData data = subject.getSubjectData();
+        return (unused) -> {
+            Boolean value;
+            Map<String, Boolean> permissions = data.getAllPermissions().get(subject.getActiveContexts());
+            if(permissions == null || (value = permissions.get(permission)) == null)
+                receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_EMPTY)));
+            else if(value)
+                receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_TRUE)));
+            else
+                receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_FALSE)));
+            result.queryResult(1);
+            return null;
+        };
+    }
+
+    public static Optional<Function<Void, Boolean>> functionOrdinaryPermissionOperationWithMessage(MessageReceiver receiver,
+                                                                                                   LocaleProperties locale,
+                                                                                                   String operation,
+                                                                                                   Subject subject,
+                                                                                                   String permission,
+                                                                                                   CommandResult.Builder result)
+    {
+        Optional<Function<Void, Boolean>> optional =
+                Optional.ofNullable(functionOrdinaryPermissionOperation0(receiver, locale, operation, subject, permission, result));
+        if(!optional.isPresent())
+            receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_OPERATION, operation)));
+        return optional;
+    }
+
+    public static Optional<Function<Void, Boolean>> functionOrdinaryPermissionOperation(MessageReceiver receiver,
+                                                                                        LocaleProperties locale,
+                                                                                        String operation,
+                                                                                        Subject subject,
+                                                                                        String permission,
+                                                                                        CommandResult.Builder result)
+    {
+        return Optional.ofNullable(functionOrdinaryPermissionOperation0(receiver, locale, operation, subject, permission, result));
+    }
+
+    private static @Nullable Function<Void, Boolean> functionOrdinaryPermissionOperation0(MessageReceiver receiver,
+                                                                                          LocaleProperties locale,
+                                                                                          String operation,
+                                                                                          Subject subject,
+                                                                                          String permission,
+                                                                                          CommandResult.Builder result)
+    {
+        final SubjectData data = subject.getSubjectData();
+
+        final Function<Void, Boolean> transaction;
+        switch(operation)
+        {
+            case "add":
+                transaction = (unused) ->
+                        data.setPermission(subject.getActiveContexts(), permission, Tristate.TRUE);
+                break;
+
+            case "forbid":
+                transaction = (unused) ->
+                        data.setPermission(subject.getActiveContexts(), permission, Tristate.FALSE);
+                break;
+
+            case "remove":
+                transaction = (unused) ->
+                        data.setPermission(subject.getActiveContexts(), permission, Tristate.UNDEFINED);
+                break;
+
+            case "has":
+                transaction = Misc.functionQueryHasPermission(
+                        receiver,
+                        locale,
+                        subject,
+                        permission,
+                        result
+                );
+                break;
+
+            case "contains":
+                transaction = Misc.functionQueryContainsPermission(
+                        receiver,
+                        locale,
+                        subject,
+                        permission,
+                        result
+                );
+                break;
+
+            default:
+                return null;
+        }
+        return transaction;
+    }
+
+    public static Optional<Function<Void, Boolean>> functionDropNClearWithMessage(MessageReceiver receiver,
+                                                                                  LocaleProperties locale,
+                                                                                  String option,
+                                                                                  Subject subject,
+                                                                                  boolean current)
+    {
+        Optional<Function<Void, Boolean>> optional =
+                Optional.ofNullable(functionDropNClear0(option, subject, current));
+        if(!optional.isPresent())
+            receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_OPTION, option)));
+        return optional;
+    }
+
+    public static Optional<Function<Void, Boolean>> functionDropNClear(String option,
+                                                                       Subject subject,
+                                                                       boolean current)
+    {
+        return Optional.ofNullable(functionDropNClear0(option, subject, current));
+    }
+
+    private static @Nullable Function<Void, Boolean> functionDropNClear0(String option,
+                                                                         Subject subject,
+                                                                         boolean current)
+    {
+        SubjectData data = subject.getSubjectData();
+
+        Function<Void, Boolean> transaction;
+        switch(option)
+        {
+            case "all":
+                transaction =
+                        current ?
+                                (unused) -> {
+                                    boolean r0 = data.clearParents(subject.getActiveContexts());
+                                    boolean r1 = data.clearPermissions(subject.getActiveContexts());
+                                    return r0 && r1;
+                                }
+                                :
+                                (unused) -> {
+                                    boolean r0 = data.clearParents();
+                                    boolean r1 = data.clearPermissions();
+                                    return r0 && r1;
+                                };
+                break;
+
+            case "perms":
+                transaction =
+                        current ?
+                                (unused) -> data.clearPermissions(subject.getActiveContexts())
+                                :
+                                (unused) -> data.clearPermissions();
+                break;
+
+            case "parents":
+                transaction =
+                        current ?
+                                (unused) -> data.clearParents(subject.getActiveContexts())
+                                :
+                                (unused) -> data.clearParents();
+                break;
+
+            default:
+                return null;
+        }
+        return transaction;
+    }
+
+    private static boolean matches(Subject subject,
+                                   Set<Context> contexts,
+                                   String permission,
+                                   Tristate value,
+                                   PermissionFilter[] filters)
+    {
+        for(PermissionFilter filter : filters)
+            if(!filter.filter(subject, contexts, permission, value))
+                return false;
+        return true;
+    }
+
+    private static boolean matches(Subject subject,
+                                  Set<Context> contexts,
+                                  Subject parent,
+                                  ParentFilter[] filters)
+    {
+        for(ParentFilter filter : filters)
+            if(!filter.filter(subject, contexts, parent))
+                return false;
+        return true;
+    }
+
+    public static interface PermissionFilter
+    {
+        public boolean filter(Subject subject, Set<Context> contexts, String permission, Tristate value);
+
+        public static PermissionFilter withContexts(final Set<Context> contexts)
+        {
+            return (s, c, p, v) -> c.equals(contexts);
+        }
+
+        public static PermissionFilter notWithContexts(final Set<Context> contexts)
+        {
+            return (s, c, p, v) -> !c.equals(contexts);
+        }
+    }
+
+    public static interface ParentFilter
+    {
+        public boolean filter(Subject subject, Set<Context> contexts, Subject parent);
+
+        public static ParentFilter withContexts(final Set<Context> contexts)
+        {
+            return (s, c, p) -> c.equals(contexts);
+        }
+
+        public static ParentFilter notWithContexts(final Set<Context> contexts)
+        {
+            return (s, c, p) -> !c.equals(contexts);
+        }
     }
 
     private static final Text SPLITTER = Text.builder(":").color(TextColors.DARK_GRAY).build();

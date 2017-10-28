@@ -44,7 +44,6 @@ public class CommandPermx implements CommandExecutor
 
         final SubjectCollection subjects;
         final Subject subject;
-        final SubjectData data;
 
         final CommandResult.Builder commandResult = CommandResult.builder();
         final Function<Void, Boolean> transaction;
@@ -81,55 +80,27 @@ public class CommandPermx implements CommandExecutor
         }
 
         subject = subjects.get(target);
-        data = subject.getSubjectData();
 
         perm.append(".").append(type);
 
-        List<Text> texts;
         boolean current = false;
         switch(operation)
         {
             case "clear":
                 current = true;
             case "drop":
-                switch(option)
-                {
-                    case "all":
-                        transaction =
-                                current ?
-                                        (unused) -> {
-                                            boolean r0 = data.clearParents(subject.getActiveContexts());
-                                            boolean r1 = data.clearPermissions(subject.getActiveContexts());
-                                            return r0 && r1;
-                                        }
-                                        :
-                                        (unused) -> {
-                                            boolean r0 = data.clearParents();
-                                            boolean r1 = data.clearPermissions();
-                                            return r0 && r1;
-                                        };
-                        break;
+                Optional<Function<Void, Boolean>> optional = Misc.functionDropNClearWithMessage(
+                        src,
+                        locale,
+                        option,
+                        subject,
+                        current
+                );
 
-                    case "perms":
-                        transaction =
-                                current ?
-                                        (unused) -> data.clearPermissions(subject.getActiveContexts())
-                                        :
-                                        (unused) -> data.clearPermissions();
-                        break;
+                if(!optional.isPresent())
+                    return CommandResult.empty();
 
-                    case "parents":
-                        transaction =
-                                current ?
-                                        (unused) -> data.clearParents(subject.getActiveContexts())
-                                        :
-                                        (unused) -> data.clearParents();
-                        break;
-
-                    default:
-                        src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_OPTION, option)));
-                        return CommandResult.empty();
-                }
+                transaction = optional.get();
                 break;
 
             case "view":
@@ -138,40 +109,12 @@ public class CommandPermx implements CommandExecutor
                 switch(option)
                 {
                     case "perms":
-                        texts = new ArrayList<>();
-                        if(current)
-                        {
-                            final Map<String, Boolean> map = data.getPermissions(subject.getActiveContexts());
-                            for(Map.Entry<String, Boolean> permEntry : map.entrySet())
-                                texts.add(Misc.fromPermission(permEntry.getKey(), permEntry.getValue()));
-                        }
-                        else
-                        {
-                            int i = 0;
-
-                            final Map<Set<Context>, Map<String, Boolean>> map = data.getAllPermissions();
-                            for(Map.Entry<Set<Context>, Map<String, Boolean>> entry : map.entrySet())
-                            {
-                                Text contextOnHover = Misc.showContextsOnHover(entry.getKey(),
-                                        Text.builder("(" + i + ")").color(TextColors.GRAY).build())[0];
-
-                                for(Map.Entry<String, Boolean> permEntry : entry.getValue().entrySet())
-                                    texts.add(Text.builder()
-                                            .append(contextOnHover)
-                                            .append(
-                                                    Misc.fromPermission(permEntry.getKey(), permEntry.getValue())
-                                            )
-                                            .build()
-                                    );
-                            }
-                        }
-
                     {
-                        final PaginationList pagination = PaginationList.builder()
-                                .contents(texts)
-                                .padding(Text.builder("=").color(TextColors.BLUE).build())
-                                .title(Text.builder("Permissions").color(TextColors.YELLOW).build())
-                                .build();
+                        final PaginationList pagination = Misc.fromPermissionsWithCurrentContextsSwitched(
+                                subject,
+                                true,
+                                current
+                        );
 
                         transaction = (unused) -> {
                             pagination.sendTo(src);
@@ -182,41 +125,12 @@ public class CommandPermx implements CommandExecutor
                         break;
 
                     case "parents":
-                        texts = new ArrayList<>();
-                        if(current)
-                        {
-                            List<Subject> list = data.getParents(subject.getActiveContexts());
-                            for(Subject object : list)
-                                texts.add(Text.builder(object.getIdentifier()).color(TextColors.GREEN).build());
-                        }
-                        else
-                        {
-                            int i = 0;
-
-                            final Map<Set<Context>, List<Subject>> map = data.getAllParents();
-                            for(Map.Entry<Set<Context>, List<Subject>> entry : map.entrySet())
-                            {
-                                Text contextOnHover = Misc.showContextsOnHover(entry.getKey(),
-                                        Text.builder("(" + i + ")").color(TextColors.GREEN).build())[0];
-
-                                for(Subject object : entry.getValue())
-                                    texts.add(Text.builder()
-                                            .append(contextOnHover)
-                                            .append(
-                                                    Text.builder(object.getIdentifier())
-                                                    .color(TextColors.BLUE)
-                                                    .build()
-                                            )
-                                            .build());
-                            }
-                        }
-
                     {
-                        final PaginationList pagination = PaginationList.builder()
-                                .contents(texts)
-                                .padding(Text.builder("=").color(TextColors.BLUE).build())
-                                .title(Text.builder("Parents").color(TextColors.YELLOW).build())
-                                .build();
+                        final PaginationList pagination = Misc.fromParentsWithCurrentContextsSwitched(
+                                subject,
+                                true,
+                                current
+                        );
 
                         transaction = (unused) -> {
                             pagination.sendTo(src);

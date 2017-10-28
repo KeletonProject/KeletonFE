@@ -13,6 +13,8 @@ public interface I18n {
 
     public static final String LOCALE_NO_SUCH_USER = "KELETON_PERMISSION_NO_SUCH_USER";
 
+    public static final String LOCALE_NO_SUCH_COLLECTION = "KELETON_PERMISSION_NO_SUCH_COLLECTION";
+
     public static final String LOCALE_SUCCEEDED = "KELETON_PERMISSION_SUCCEEDED";
 
     public static final String LOCALE_FAILED = "KELETON_PERMISSION_FAILED";

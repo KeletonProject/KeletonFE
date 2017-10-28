@@ -82,88 +82,60 @@ public class CommandPerm implements CommandExecutor {
         final SubjectData data = subject.getSubjectData();
         perm.append(".").append(type);
 
-        // Parsing operation
-        switch(operation)
-        {
-            case "add":
-                transaction = (unused) ->
-                        data.setPermission(subject.getActiveContexts(), permission, Tristate.TRUE);
-                break;
+        Optional<Function<Void, Boolean>> optional =
+                Misc.functionOrdinaryPermissionOperation(
+                        src,
+                        locale,
+                        operation,
+                        subject,
+                        permission,
+                        commandResult
+                );
 
-            case "remove":
-                transaction = (unused) ->
-                        data.setPermission(subject.getActiveContexts(), permission, Tristate.UNDEFINED);
-                break;
-
-            case "forbid":
-                transaction = (unused) ->
-                        data.setPermission(subject.getActiveContexts(), permission, Tristate.FALSE);
-                break;
-
-            case "has":
-                transaction = (unused) -> {
-                    if(subject.hasPermission(permission))
-                        src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_TRUE)));
-                    else
-                        src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_FALSE)));
-                    commandResult.queryResult(1);
-                    return null;
-                };
-                break;
-
-            case "contains":
-                transaction = (unused) -> {
-                    Boolean value;
-                    Map<String, Boolean> permissions = data.getAllPermissions().get(subject.getActiveContexts());
-                    if(permissions == null || (value = permissions.get(permission)) == null)
-                        src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_EMPTY)));
-                    else if(value)
-                        src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_TRUE)));
-                    else
-                        src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_QUERY_RESULT_FALSE)));
-                    commandResult.queryResult(1);
-                    return null;
-                };
-                break;
-
-            case "include":
-                transaction = (unused) -> {
-                    if(!service.getGroupSubjects().hasRegistered(argument))
-                        src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_GROUP, argument)));
-                    else
-                    {
-                        Subject parent = service.getGroupSubjects().get(argument);
-                        if(parent.isChildOf(subject))
-                            src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_INHERITANCE_LOOP, argument)));
-                        else if(subject.isChildOf(parent))
-                            src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_IHERITANCE_EXISTS, argument)));
+        if(optional.isPresent())
+            transaction = optional.get();
+        else
+            switch(operation)
+            {
+                case "include":
+                    transaction = (unused) -> {
+                        if(!service.getGroupSubjects().hasRegistered(argument))
+                            src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_GROUP, argument)));
                         else
-                            return data.addParent(subject.getActiveContexts(), parent);
-                    }
-                    return null;
-                };
-                break;
+                        {
+                            Subject parent = service.getGroupSubjects().get(argument);
+                            if(parent.isChildOf(subject))
+                                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_INHERITANCE_LOOP, argument)));
+                            else if(subject.isChildOf(parent))
+                                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_IHERITANCE_EXISTS, argument)));
+                            else
+                                return data.addParent(subject.getActiveContexts(), parent);
+                        }
+                        return null;
+                    };
+                    break;
 
-            case "exclude":
-                transaction = (unused) -> {
-                    if(!service.getGroupSubjects().hasRegistered(argument))
-                        src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_GROUP, argument)));
-                    else
-                    {
-                        Subject parent = service.getGroupSubjects().get(argument);
-                        if(!subject.isChildOf(parent))
-                            src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_INHERITANCE_NOT_EXISTS, argument)));
+                case "exclude":
+                    transaction = (unused) -> {
+                        if(!service.getGroupSubjects().hasRegistered(argument))
+                            src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_GROUP, argument)));
                         else
-                            return data.removeParent(subject.getActiveContexts(), parent);
-                    }
-                    return null;
-                };
-                break;
+                        {
+                            Subject parent = service.getGroupSubjects().get(argument);
+                            if(!subject.isChildOf(parent))
+                                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_INHERITANCE_NOT_EXISTS, argument)));
+                            else
+                                return data.removeParent(subject.getActiveContexts(), parent);
+                        }
+                        return null;
+                    };
+                    break;
 
-            default:
-                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_OPERATION, operation)));
-                return CommandResult.empty();
-        }
+                default:
+                    src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_OPERATION, operation)));
+                    return CommandResult.empty();
+            }
+
         perm.append(".").append(operation);
 
         if(!src.hasPermission(perm.toString()))
