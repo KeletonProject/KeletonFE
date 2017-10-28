@@ -13,9 +13,7 @@ import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.service.permission.Subject;
 import org.spongepowered.api.service.permission.SubjectCollection;
 import org.spongepowered.api.service.permission.SubjectData;
-import org.spongepowered.api.util.Tristate;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 

@@ -13,7 +13,9 @@ import org.spongepowered.api.profile.GameProfile;
 import org.spongepowered.api.profile.ProfileNotFoundException;
 import org.spongepowered.api.service.context.Context;
 import org.spongepowered.api.service.pagination.PaginationList;
+import org.spongepowered.api.service.permission.PermissionService;
 import org.spongepowered.api.service.permission.Subject;
+import org.spongepowered.api.service.permission.SubjectCollection;
 import org.spongepowered.api.service.permission.SubjectData;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
@@ -732,6 +734,55 @@ public final class Misc {
                 return null;
         }
         return transaction;
+    }
+
+    public static Optional<Subject> parseSubjectWithMessage(MessageReceiver receiver,
+                                                            PermissionService service,
+                                                            LocaleProperties locale,
+                                                            String type,
+                                                            String identifier)
+    {
+        return Optional.ofNullable(parseSubjectWithMessage0(receiver, service, locale, type, identifier));
+    }
+
+    private static @Nullable Subject parseSubjectWithMessage0(MessageReceiver receiver,
+                                                             PermissionService service,
+                                                             LocaleProperties locale,
+                                                             String type,
+                                                             String identifier)
+    {
+        String target;
+        SubjectCollection subjects;
+        switch(type)
+        {
+            case "group":
+                subjects = service.getGroupSubjects();
+                target = identifier;
+
+                if(!subjects.hasRegistered(target))
+                {
+                    receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_GROUP, target)));
+                    return null;
+                }
+                break;
+
+            case "user":
+                subjects = service.getUserSubjects();
+                Optional<GameProfile> optional = Misc.fromUser(identifier);
+                if(!optional.isPresent())
+                {
+                    receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_USER, identifier)));
+                    return null;
+                }
+                target = optional.get().getUniqueId().toString();
+
+                break;
+            default:
+                receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_SUBJECT_TYPE, type)));
+                return null;
+        }
+
+        return subjects.get(target);
     }
 
     public static Optional<Function<Void, Boolean>> functionDropNClearWithMessage(MessageReceiver receiver,

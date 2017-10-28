@@ -10,11 +10,8 @@ import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.spec.CommandExecutor;
-import org.spongepowered.api.profile.GameProfile;
 import org.spongepowered.api.service.permission.Subject;
-import org.spongepowered.api.service.permission.SubjectCollection;
 import org.spongepowered.api.service.permission.SubjectData;
-import org.spongepowered.api.util.Tristate;
 
 import java.util.*;
 import java.util.function.Function;
@@ -35,9 +32,6 @@ public class CommandPerm implements CommandExecutor {
         final String argument = args.<String>getOne("argument").get();
         final String targ = args.<String>getOne("target").get();
 
-        final String target;
-
-        final SubjectCollection subjects;
         final Subject subject;
 
         final CommandResult.Builder commandResult = CommandResult.builder();
@@ -45,40 +39,19 @@ public class CommandPerm implements CommandExecutor {
         StringBuilder perm = new StringBuilder("permission.perm");
         Function<Void, Boolean> transaction;
 
-        // Parsing type
-        switch(type)
-        {
-            case "group":
-                target = targ;
-                subjects = service.getGroupSubjects();
+        Optional<Subject> _optional = Misc.parseSubjectWithMessage(
+                src,
+                service,
+                locale,
+                type,
+                targ
+        );
 
-                if(!subjects.hasRegistered(target))
-                {
-                    src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_GROUP, target)));
-                    return CommandResult.empty();
-                }
+        if(!_optional.isPresent())
+            return CommandResult.empty();
 
-                break;
+        subject = _optional.get();
 
-            case "user":
-                Optional<GameProfile> optional = Misc.fromUser(targ);
-                if(!optional.isPresent())
-                {
-                    src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_USER, targ)));
-                    return CommandResult.empty();
-                }
-
-                target = optional.get().getUniqueId().toString();
-                subjects = service.getUserSubjects();
-
-                break;
-
-            default:
-                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_SUBJECT_TYPE, type)));
-                return CommandResult.empty();
-        }
-
-        subject = subjects.get(target);
         final SubjectData data = subject.getSubjectData();
         perm.append(".").append(type);
 

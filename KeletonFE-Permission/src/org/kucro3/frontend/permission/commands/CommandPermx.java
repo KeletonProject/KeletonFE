@@ -40,9 +40,6 @@ public class CommandPermx implements CommandExecutor
         final String option = args.<String>getOne("option").get();
         final String targ = args.<String>getOne("target").get();
 
-        final String target;
-
-        final SubjectCollection subjects;
         final Subject subject;
 
         final CommandResult.Builder commandResult = CommandResult.builder();
@@ -50,36 +47,18 @@ public class CommandPermx implements CommandExecutor
 
         StringBuilder perm = new StringBuilder("permission.permx");
 
-        switch(type)
-        {
-            case "group":
-                subjects = service.getGroupSubjects();
-                target = targ;
+        Optional<Subject> _optional = Misc.parseSubjectWithMessage(
+                src,
+                service,
+                locale,
+                type,
+                targ
+        );
 
-                if(!subjects.hasRegistered(target))
-                {
-                    src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_GROUP, target)));
-                    return CommandResult.empty();
-                }
-                break;
+        if(!_optional.isPresent())
+            return CommandResult.empty();
 
-            case "user":
-                subjects = service.getUserSubjects();
-                Optional<GameProfile> optional = Misc.fromUser(targ);
-                if(!optional.isPresent())
-                {
-                    src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_USER, targ)));
-                    return CommandResult.empty();
-                }
-                target = optional.get().getUniqueId().toString();
-
-                break;
-            default:
-                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_UNKNOWN_SUBJECT_TYPE, type)));
-                return CommandResult.empty();
-        }
-
-        subject = subjects.get(target);
+        subject = _optional.get();
 
         perm.append(".").append(type);
 
