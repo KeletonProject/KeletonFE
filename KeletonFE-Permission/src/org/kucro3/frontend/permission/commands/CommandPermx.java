@@ -126,15 +126,25 @@ public class CommandPermx implements CommandExecutor
                 break;
 
             case "viewall":
+                current = true;
+            case "showall":
                 final PaginationList list;
                 switch(option)
                 {
                     case "perms":
-                        list = Misc.fromPermissions(subject);
+                        list = Misc.fromPermissionsWithCurrentContextsSwitched(
+                                subject,
+                                false,
+                                current
+                        );
                         break;
 
                     case "parents":
-                        list = Misc.fromParents(subject);
+                        list = Misc.fromParentsWithCurrentContextsSwitched(
+                                subject,
+                                false,
+                                current
+                        );
                         break;
 
                     default:
