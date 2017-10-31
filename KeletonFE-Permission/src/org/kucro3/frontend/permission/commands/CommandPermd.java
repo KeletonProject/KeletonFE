@@ -12,7 +12,6 @@ import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.service.permission.Subject;
 import org.spongepowered.api.service.permission.SubjectCollection;
-import org.spongepowered.api.service.permission.SubjectData;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -44,8 +43,6 @@ public class CommandPermd implements CommandExecutor {
             }
             subject = collection.getDefaults();
         }
-
-        final SubjectData data = subject.getSubjectData();
 
         final Function<Void, Boolean> transaction;
         final CommandResult.Builder result = CommandResult.builder();

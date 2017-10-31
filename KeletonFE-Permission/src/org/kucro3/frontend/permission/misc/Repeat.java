@@ -54,6 +54,12 @@ public final class Repeat {
     }
 
     @Override
+    public String toString()
+    {
+        return string;
+    }
+
+    @Override
     public boolean equals(Object obj)
     {
         if(obj == null)

@@ -2,10 +2,7 @@ package org.kucro3.frontend.permission;
 
 import com.google.inject.Inject;
 import configurate.typesafe.config.ConfigException;
-import org.kucro3.frontend.permission.commands.CommandPerm;
-import org.kucro3.frontend.permission.commands.CommandPermd;
-import org.kucro3.frontend.permission.commands.CommandPermdx;
-import org.kucro3.frontend.permission.commands.CommandPermx;
+import org.kucro3.frontend.permission.commands.*;
 import org.kucro3.keleton.i18n.LocaleProperties;
 import org.kucro3.keleton.i18n.LocaleService;
 import org.kucro3.keleton.permission.EnhancedPermissionService;
@@ -112,6 +109,29 @@ public class SpongeMain {
                 .executor(new CommandPermdx(service, locale))
                 .build();
         Sponge.getCommandManager().register(this, spec, "permdx");
+
+        spec = CommandSpec.builder()
+                .description(Text.of("Permission control for permission groups"))
+                .arguments(
+                        GenericArguments.onlyOne(
+                                GenericArguments.string(Text.of("operation"))
+                        ),
+                        GenericArguments.onlyOne(
+                                GenericArguments.string(Text.of("target"))
+                        )
+                )
+                .executor(new CommandPermg(service, locale))
+                .build();
+        Sponge.getCommandManager().register(this, spec, "permg");
+
+        spec = CommandSpec.builder()
+                .description(Text.of("Advanced Permission control for permission groups"))
+                .arguments(
+
+                )
+                .executor(new CommandPermgx(service, locale))
+                .build();
+        Sponge.getCommandManager().register(this, spec, "permgx");
     }
 
     public Logger gerLogger()
