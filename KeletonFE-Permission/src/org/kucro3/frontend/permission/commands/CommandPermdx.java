@@ -103,25 +103,15 @@ public class CommandPermdx implements CommandExecutor {
 
         perm.append(operation);
 
-        if(!src.hasPermission(perm.toString()))
-        {
-            src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_PERMISSION)));
+        if(!Misc.checkPermission(src, locale, perm.toString()))
             return CommandResult.empty();
-        }
 
-        Boolean _result = transaction.apply(null);
-        if(_result != null)
-            if(_result)
-            {
-                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_SUCCEEDED)));
-                result.successCount(1);
-            }
-            else
-            {
-                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_FAILED)));
-                result.successCount(0);
-            }
-
+        Misc.computeResultWithMessage(
+                src,
+                locale,
+                result,
+                transaction.apply(null)
+        );
         return result.build();
     }
 

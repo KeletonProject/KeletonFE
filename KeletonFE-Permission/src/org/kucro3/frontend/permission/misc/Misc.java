@@ -6,6 +6,7 @@ import org.kucro3.keleton.i18n.LocaleProperties;
 import org.kucro3.keleton.text.TextUtil;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandResult;
+import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.item.ItemTypes;
 import org.spongepowered.api.item.inventory.ItemStack;
@@ -21,6 +22,7 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.text.channel.MessageReceiver;
 import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.text.format.TextStyles;
 import org.spongepowered.api.util.Tristate;
 
 import javax.annotation.Nullable;
@@ -30,6 +32,40 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 public final class Misc {
+    public static PaginationList fromGroupsNShowOnClick(PermissionService service)
+    {
+        List<Text> contents = new ArrayList<>();
+
+        SubjectCollection groups = service.getGroupSubjects();
+        for(Subject subject : groups.getAllSubjects())
+        {
+            Text.Builder line = Text.builder(subject.getIdentifier())
+                    .color(TextColors.BLUE)
+                    .style(TextStyles.UNDERLINE)
+                    .onHover(
+                            TextActions.showText(
+                                    Text
+                                            .builder("Click to get further information (Show all permissions)")
+                                            .color(TextColors.GRAY)
+                                            .build()
+                            )
+                    )
+                    .onClick(
+                            TextActions.runCommand(
+                                    String.format("permx group showall perms %s", subject.getIdentifier())
+                            )
+                    );
+
+            contents.add(line.build());
+        }
+
+        return PaginationList.builder()
+                .title(Text.of("Groups"))
+                .padding(Text.of("="))
+                .contents(contents)
+                .build();
+    }
+
     public static Text[] showContextsOnHover(Set<Context> contexts, Text... text)
     {
         return showContextsOnHover(contexts, "Context", text);
@@ -736,6 +772,34 @@ public final class Misc {
         return transaction;
     }
 
+    public static boolean checkPermission(CommandSource src,
+                                          LocaleProperties locale,
+                                          String permission)
+    {
+        boolean result = src.hasPermission(permission);
+        if(!result)
+            src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_PERMISSION)));
+        return result;
+    }
+
+    public static void computeResultWithMessage(MessageReceiver receiver,
+                                                   LocaleProperties locale,
+                                                   CommandResult.Builder builder,
+                                                   Boolean result)
+    {
+        if(result != null)
+            if(result)
+            {
+                receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_SUCCEEDED)));
+                builder.successCount(1);
+            }
+            else
+            {
+                receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_FAILED)));
+                builder.successCount(0);
+            }
+    }
+
     public static Optional<Subject> parseSubjectWithMessage(MessageReceiver receiver,
                                                             PermissionService service,
                                                             LocaleProperties locale,
@@ -758,12 +822,6 @@ public final class Misc {
             case "group":
                 subjects = service.getGroupSubjects();
                 target = identifier;
-
-                if(!subjects.hasRegistered(target))
-                {
-                    receiver.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_SUCH_GROUP, target)));
-                    return null;
-                }
                 break;
 
             case "user":

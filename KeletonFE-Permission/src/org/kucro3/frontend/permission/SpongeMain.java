@@ -1,7 +1,6 @@
 package org.kucro3.frontend.permission;
 
 import com.google.inject.Inject;
-import configurate.typesafe.config.ConfigException;
 import org.kucro3.frontend.permission.commands.*;
 import org.kucro3.keleton.i18n.LocaleProperties;
 import org.kucro3.keleton.i18n.LocaleService;
@@ -111,23 +110,14 @@ public class SpongeMain {
         Sponge.getCommandManager().register(this, spec, "permdx");
 
         spec = CommandSpec.builder()
-                .description(Text.of("Permission control for permission groups"))
+                .description(Text.of("Advanced Permission control for permission groups"))
                 .arguments(
                         GenericArguments.onlyOne(
                                 GenericArguments.string(Text.of("operation"))
                         ),
                         GenericArguments.onlyOne(
-                                GenericArguments.string(Text.of("target"))
+                                GenericArguments.string(Text.of("option"))
                         )
-                )
-                .executor(new CommandPermg(service, locale))
-                .build();
-        Sponge.getCommandManager().register(this, spec, "permg");
-
-        spec = CommandSpec.builder()
-                .description(Text.of("Advanced Permission control for permission groups"))
-                .arguments(
-
                 )
                 .executor(new CommandPermgx(service, locale))
                 .build();

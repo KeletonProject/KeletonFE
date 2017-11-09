@@ -111,25 +111,15 @@ public class CommandPerm implements CommandExecutor {
 
         perm.append(".").append(operation);
 
-        if(!src.hasPermission(perm.toString()))
-        {
-            src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_PERMISSION)));
+        if(!Misc.checkPermission(src, locale, perm.toString()))
             return CommandResult.empty();
-        }
 
-        Boolean result = transaction.apply(null);
-
-        if(result != null)
-            if(!result)
-            {
-                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_FAILED)));
-                commandResult.successCount(0);
-            }
-            else
-            {
-                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_SUCCEEDED)));
-                commandResult.successCount(1);
-            }
+        Misc.computeResultWithMessage(
+                src,
+                locale,
+                commandResult,
+                transaction.apply(null)
+        );
 
         return commandResult.build();
     }

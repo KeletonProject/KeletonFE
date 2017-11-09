@@ -12,6 +12,7 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.event.command.TabCompleteEvent;
 import org.spongepowered.api.profile.GameProfile;
 import org.spongepowered.api.service.context.Context;
 import org.spongepowered.api.service.pagination.PaginationList;
@@ -164,24 +165,15 @@ public class CommandPermx implements CommandExecutor
 
         perm.append(".").append(operation).append(".").append(option);
 
-        if(!src.hasPermission(perm.toString()))
-        {
-            src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_NO_PERMISSION)));
+        if(!Misc.checkPermission(src, locale, perm.toString()))
             return CommandResult.empty();
-        }
 
-        Boolean result = transaction.apply(null);
-        if(result != null)
-            if(result)
-            {
-                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_FAILED)));
-                commandResult.successCount(0);
-            }
-            else
-            {
-                src.sendMessage(TextUtil.fromColored(locale.by(I18n.LOCALE_SUCCEEDED)));
-                commandResult.successCount(1);
-            }
+        Misc.computeResultWithMessage(
+                src,
+                locale,
+                commandResult,
+                transaction.apply(null)
+        );
 
         return commandResult.build();
     }
