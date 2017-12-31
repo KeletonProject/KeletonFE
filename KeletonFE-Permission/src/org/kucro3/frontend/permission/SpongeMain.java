@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.kucro3.frontend.permission.commands.*;
 import org.kucro3.keleton.i18n.LocaleProperties;
 import org.kucro3.keleton.i18n.LocaleService;
+import org.kucro3.keleton.implementation.InvokeOnEnable;
 import org.kucro3.keleton.implementation.KeletonInstance;
 import org.kucro3.keleton.implementation.KeletonModule;
 import org.kucro3.keleton.permission.EnhancedPermissionService;
@@ -21,7 +22,7 @@ import org.spongepowered.api.text.Text;
         authors = "Kumonda221")
 @KeletonModule(name = "keleton-fe-permission",
                dependencies = {"keletonframework", "keleton-impl-permission"})
-public class SpongeMain extends KeletonInstance {
+public class SpongeMain{
     @Inject
     public SpongeMain(Logger logger)
     {
@@ -29,7 +30,7 @@ public class SpongeMain extends KeletonInstance {
         INSTANCE = this;
     }
 
-    @Override
+    @InvokeOnEnable
     public void onEnable()
     {
         EnhancedPermissionService service =

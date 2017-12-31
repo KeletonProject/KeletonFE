@@ -10,6 +10,7 @@ import org.kucro3.keleton.auth.AuthKeys;
 import org.kucro3.keleton.auth.AuthService;
 import org.kucro3.keleton.i18n.LocaleProperties;
 import org.kucro3.keleton.i18n.LocaleService;
+import org.kucro3.keleton.implementation.InvokeOnEnable;
 import org.kucro3.keleton.implementation.KeletonInstance;
 import org.kucro3.keleton.implementation.KeletonModule;
 import org.kucro3.keleton.keyring.ObjectService;
@@ -33,7 +34,7 @@ import java.util.Locale;
 		authors = {"Kumonda221"})
 @KeletonModule(name = "keleton-fe-auth",
 			   dependencies = {"keletonframework", "keleton-impl-auth"})
-public class SpongeMain extends KeletonInstance {
+public class SpongeMain {
 	@Inject
 	public SpongeMain(Logger logger)
 	{
@@ -46,7 +47,7 @@ public class SpongeMain extends KeletonInstance {
 		return logger;
 	}
 
-	@Override
+	@InvokeOnEnable
 	public void onEnable()
 	{
 		try {
