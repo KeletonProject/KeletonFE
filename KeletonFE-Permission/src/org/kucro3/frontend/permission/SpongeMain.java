@@ -4,22 +4,24 @@ import com.google.inject.Inject;
 import org.kucro3.frontend.permission.commands.*;
 import org.kucro3.keleton.i18n.LocaleProperties;
 import org.kucro3.keleton.i18n.LocaleService;
+import org.kucro3.keleton.implementation.KeletonInstance;
+import org.kucro3.keleton.implementation.KeletonModule;
 import org.kucro3.keleton.permission.EnhancedPermissionService;
 import org.slf4j.Logger;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
-import org.spongepowered.api.event.Listener;
-import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.text.Text;
 
-@Plugin(id = "frontend-permission",
-        name = "frontend-permission",
+@Plugin(id = "keleton-fe-permission",
+        name = "keleton-fe-permission",
         version = "1.0",
         description = "Permission service frontend under KeletonFramework",
         authors = "Kumonda221")
-public class SpongeMain {
+@KeletonModule(name = "keleton-fe-permission",
+               dependencies = {"keletonframework", "keleton-impl-permission"})
+public class SpongeMain extends KeletonInstance {
     @Inject
     public SpongeMain(Logger logger)
     {
@@ -27,8 +29,8 @@ public class SpongeMain {
         INSTANCE = this;
     }
 
-    @Listener
-    public void onLoad(GameInitializationEvent event)
+    @Override
+    public void onEnable()
     {
         EnhancedPermissionService service =
                 EnhancedPermissionService.TOKEN.get(() -> new IllegalStateException("Permission service not reachable"));

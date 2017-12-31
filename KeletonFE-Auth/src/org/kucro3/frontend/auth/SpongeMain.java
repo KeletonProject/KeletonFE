@@ -10,6 +10,8 @@ import org.kucro3.keleton.auth.AuthKeys;
 import org.kucro3.keleton.auth.AuthService;
 import org.kucro3.keleton.i18n.LocaleProperties;
 import org.kucro3.keleton.i18n.LocaleService;
+import org.kucro3.keleton.implementation.KeletonInstance;
+import org.kucro3.keleton.implementation.KeletonModule;
 import org.kucro3.keleton.keyring.ObjectService;
 import org.kucro3.keleton.world.SpawnProvider;
 import org.slf4j.Logger;
@@ -24,12 +26,14 @@ import com.google.inject.Inject;
 
 import java.util.Locale;
 
-@Plugin(id = "frontend-auth",
-		name = "frontend-auth",
+@Plugin(id = "keleton-fe-auth",
+		name = "keleton-fe-auth",
 		version = "1.0",
 		description = "Auth system frontend under KeletonFramework",
 		authors = {"Kumonda221"})
-public class SpongeMain {
+@KeletonModule(name = "keleton-fe-auth",
+			   dependencies = {"keletonframework", "keleton-impl-auth"})
+public class SpongeMain extends KeletonInstance {
 	@Inject
 	public SpongeMain(Logger logger)
 	{
@@ -41,9 +45,9 @@ public class SpongeMain {
 	{
 		return logger;
 	}
-	
-	@Listener
-	public void onLoad(GameInitializationEvent event)
+
+	@Override
+	public void onEnable()
 	{
 		try {
 			AuthService auth = ObjectService.get(AuthKeys.SERVICE_POOL).get().constructIfAbsent("keleton-auth");
@@ -61,13 +65,7 @@ public class SpongeMain {
 		} catch (AuthException e) {
 			logger.error("Cannot initialize auth service!");
 			e.printStackTrace();
-			failed = true;
 		}
-	}
-	
-	public boolean failed()
-	{
-		return failed;
 	}
 	
 	public static SpongeMain getInstance()
@@ -77,9 +75,7 @@ public class SpongeMain {
 	
 	private static SpongeMain instance;
 	
-	public static final String ID = "frontend-auth";
-	
-	private boolean failed;
-	
+	public static final String ID = "keleton-fe-auth";
+
 	private final Logger logger;
 }
